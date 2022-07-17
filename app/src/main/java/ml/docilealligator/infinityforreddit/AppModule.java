@@ -31,6 +31,7 @@ import ml.docilealligator.infinityforreddit.utils.CustomThemeSharedPreferencesUt
 import ml.docilealligator.infinityforreddit.utils.SharedPreferencesUtils;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.guava.GuavaCallAdapterFactory;
 import retrofit2.converter.scalars.ScalarsConverterFactory;
@@ -198,6 +199,7 @@ class AppModule {
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .connectionPool(new ConnectionPool(0, 1, TimeUnit.NANOSECONDS));
+        maybeAddHttpLoggingInterceptor(okHttpClientBuilder);
         return okHttpClientBuilder.build();
     }
 
@@ -205,11 +207,23 @@ class AppModule {
     @Named("rpan")
     @Singleton
     OkHttpClient provideRPANOkHttpClient() {
-        return new OkHttpClient.Builder()
+        OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build();
+                .writeTimeout(30, TimeUnit.SECONDS);
+        maybeAddHttpLoggingInterceptor(okHttpClientBuilder);
+        return okHttpClientBuilder.build();
+    }
+
+    /**
+     * Adds an interceptor to OkHttpClient for DEBUG builds that allows to see network requests/responses in logcat
+     */
+    private static void maybeAddHttpLoggingInterceptor(OkHttpClient.Builder okHttpClientBuilder) {
+        if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+            okHttpClientBuilder.addInterceptor(loggingInterceptor);
+        }
     }
 
     @Provides
